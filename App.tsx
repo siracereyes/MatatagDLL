@@ -30,6 +30,12 @@ const App: React.FC = () => {
     setLastRequestData(null);
   };
 
+  // Define a unique key for this app's visitor counter
+  // We use a clean string identifier.
+  const trackerKey = "matatag-lesson-planner-cjmr.vercel.app";
+  // Add a timestamp to prevent browser caching of the badge image
+  const cacheBuster = Date.now();
+
   return (
     <div className="min-h-screen bg-gray-100 pb-12">
       {/* Navbar */}
@@ -96,9 +102,11 @@ const App: React.FC = () => {
          <p>© 2025 AI Lesson Planner CJMR</p>
          <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
             <img 
-              src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fmatatag-planner-cjmr-generic.vercel.app&count_bg=%232563EB&title_bg=%231F2937&icon=googleclassroom.svg&icon_color=%23E7E7E7&title=Educators&edge_flat=false" 
+              src={`https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=${encodeURIComponent(trackerKey)}&count_bg=%232563EB&title_bg=%231F2937&icon=googleclassroom&icon_color=%23E7E7E7&title=Educators&edge_flat=false&t=${cacheBuster}`} 
               alt="Visitor Count"
               className="h-6"
+              loading="lazy"
+              referrerPolicy="no-referrer"
             />
          </div>
       </footer>
