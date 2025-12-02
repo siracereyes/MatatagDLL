@@ -27,12 +27,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
       day5: ''
     },
     specificNeeds: '',
-    checkerName: 'Ace M. Reyes',
-    checkerPosition: 'Master Teacher I',
-    approverName: 'Jessie Matriano',
-    approverPosition: 'Principal IV',
-    noterName: 'Cerille Joseph M. Reyes',
-    noterPosition: 'Head Teacher VI'
+    checkerName: '',
+    checkerPosition: '',
+    approverName: '',
+    approverPosition: '',
+    noterName: '',
+    noterPosition: ''
   });
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -173,7 +173,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
             {/* Checker */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Checked by</label>
-              <input type="text" name="checkerName" value={formData.checkerName} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="e.g. Ace M. Reyes" />
+              <input type="text" name="checkerName" value={formData.checkerName} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="e.g. Jerson Castillo" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Position</label>
@@ -183,7 +183,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
             {/* Noter */}
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Noted by</label>
-              <input type="text" name="noterName" value={formData.noterName} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="e.g. Cerille Joseph M. Reyes" />
+              <input type="text" name="noterName" value={formData.noterName} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="e.g. Michael Armentia" />
             </div>
             <div className="space-y-2">
               <label className="text-sm font-semibold text-gray-700">Position</label>
