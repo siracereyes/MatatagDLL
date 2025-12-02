@@ -92,8 +92,15 @@ const App: React.FC = () => {
         )}
       </main>
       
-      <footer className="text-center text-gray-400 text-sm py-8 no-print">
+      <footer className="text-center text-gray-400 text-sm py-8 no-print flex flex-col items-center gap-3">
          <p>© 2025 AI Lesson Planner CJMR</p>
+         <div className="flex items-center gap-2 opacity-80 hover:opacity-100 transition-opacity">
+            <img 
+              src="https://hits.seeyoufarm.com/api/count/incr/badge.svg?url=https%3A%2F%2Fmatatag-planner-cjmr-generic.vercel.app&count_bg=%232563EB&title_bg=%231F2937&icon=googleclassroom.svg&icon_color=%23E7E7E7&title=Educators&edge_flat=false" 
+              alt="Visitor Count"
+              className="h-6"
+            />
+         </div>
       </footer>
     </div>
   );
