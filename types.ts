@@ -77,4 +77,9 @@ export interface FormData {
   approverPosition: string;
   noterName: string;
   noterPosition: string;
+  // New optional field for file upload
+  exemplarFile?: {
+    data: string; // Base64 string without prefix
+    mimeType: string;
+  } | null;
 }

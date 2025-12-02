@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { FormData } from '../types';
-import { Calendar, BookOpen, Layers, Users, AlertCircle, PenTool } from 'lucide-react';
+import { extractStandards } from '../services/geminiService';
+import { Calendar, BookOpen, Layers, Users, AlertCircle, PenTool, Upload, FileText, CheckCircle, Loader2 } from 'lucide-react';
 
 interface InputFormProps {
   onSubmit: (data: FormData) => void;
@@ -32,8 +33,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
     approverName: '',
     approverPosition: '',
     noterName: '',
-    noterPosition: ''
+    noterPosition: '',
+    exemplarFile: null
   });
+
+  const [isExtracting, setIsExtracting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -48,6 +53,51 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
         [day]: value
       }
     }));
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        // Strip the data URL prefix (e.g., "data:image/jpeg;base64,")
+        const base64Data = base64String.split(',')[1];
+        
+        setFormData(prev => ({
+          ...prev,
+          exemplarFile: {
+            data: base64Data,
+            mimeType: file.type
+          }
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleExtractStandards = async () => {
+    if (!formData.exemplarFile) return;
+    
+    setIsExtracting(true);
+    try {
+      const extracted = await extractStandards(formData.exemplarFile);
+      setFormData(prev => ({
+        ...prev,
+        contentStandard: extracted.contentStandard || prev.contentStandard,
+        performanceStandard: extracted.performanceStandard || prev.performanceStandard,
+        learningCompetency: extracted.learningCompetency || prev.learningCompetency
+      }));
+    } catch (error) {
+      alert("Failed to extract standards. Please check the file or try again.");
+    } finally {
+      setIsExtracting(false);
+    }
+  };
+
+  const removeFile = () => {
+    setFormData(prev => ({ ...prev, exemplarFile: null }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,6 +119,64 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
       
       <form onSubmit={handleSubmit} className="p-6 space-y-8">
         
+        {/* Section 0: Upload Exemplar */}
+        <div className="space-y-4">
+          <h3 className="text-gray-800 font-bold border-b pb-2 flex items-center gap-2">
+            <Upload className="w-5 h-5 text-blue-600" /> Upload Lesson Exemplar (Optional)
+          </h3>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-4">
+            <p className="text-sm text-gray-600 mb-3">
+              Upload a Lesson Exemplar (Image or PDF) to automatically extract standards and use it as a reference for the lesson plan style.
+            </p>
+            
+            {!formData.exemplarFile ? (
+              <div className="flex items-center gap-4">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileChange}
+                  accept="image/png, image/jpeg, application/pdf"
+                  className="block w-full text-sm text-gray-500
+                    file:mr-4 file:py-2 file:px-4
+                    file:rounded-full file:border-0
+                    file:text-sm file:font-semibold
+                    file:bg-blue-100 file:text-blue-700
+                    hover:file:bg-blue-200"
+                />
+              </div>
+            ) : (
+              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                <div className="flex items-center gap-2 text-green-700 font-medium bg-green-50 px-3 py-1.5 rounded-full border border-green-200">
+                   <FileText className="w-4 h-4" />
+                   File Attached
+                   <button type="button" onClick={removeFile} className="ml-2 text-gray-400 hover:text-red-500 text-xs uppercase font-bold">✕</button>
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={handleExtractStandards}
+                  disabled={isExtracting}
+                  className={`text-sm px-4 py-1.5 rounded-full flex items-center gap-2 transition-colors ${
+                    isExtracting 
+                    ? 'bg-gray-200 text-gray-500 cursor-not-allowed' 
+                    : 'bg-indigo-600 text-white hover:bg-indigo-700'
+                  }`}
+                >
+                  {isExtracting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Extracting...
+                    </>
+                  ) : (
+                    <>
+                      <SparklesIcon className="w-4 h-4" /> Auto-fill Standards
+                    </>
+                  )}
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+
         {/* Section 1: Basic Info */}
         <div className="space-y-4">
           <h3 className="text-gray-800 font-bold border-b pb-2 flex items-center gap-2">
@@ -113,15 +221,24 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           </h3>
           <div className="grid grid-cols-1 gap-6">
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">A. Content Standards</label>
+              <label className="text-sm font-semibold text-gray-700 flex justify-between">
+                A. Content Standards
+                {formData.contentStandard && formData.exemplarFile && <CheckCircle className="w-4 h-4 text-green-600" />}
+              </label>
               <textarea name="contentStandard" required rows={3} value={formData.contentStandard} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="The learners demonstrate understanding of..." />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">B. Performance Standards</label>
+              <label className="text-sm font-semibold text-gray-700 flex justify-between">
+                B. Performance Standards
+                {formData.performanceStandard && formData.exemplarFile && <CheckCircle className="w-4 h-4 text-green-600" />}
+              </label>
               <textarea name="performanceStandard" required rows={3} value={formData.performanceStandard} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="The learners shall be able to..." />
             </div>
             <div className="space-y-2">
-              <label className="text-sm font-semibold text-gray-700">C. Learning Competency/ies</label>
+              <label className="text-sm font-semibold text-gray-700 flex justify-between">
+                C. Learning Competency/ies
+                {formData.learningCompetency && formData.exemplarFile && <CheckCircle className="w-4 h-4 text-green-600" />}
+              </label>
               <textarea name="learningCompetency" required rows={3} value={formData.learningCompetency} onChange={handleChange} className="w-full px-4 py-2 rounded-lg border border-gray-300 focus:ring-2 focus:ring-blue-500 transition-colors" placeholder="e.g. Explain how different factors affect..." />
             </div>
           </div>
@@ -214,10 +331,7 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
           >
             {isLoading ? (
               <span className="flex items-center justify-center gap-2">
-                <svg className="animate-spin h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
+                <Loader2 className="animate-spin h-5 w-5" />
                 Generating 5-Day DLL...
               </span>
             ) : (
@@ -229,5 +343,12 @@ const InputForm: React.FC<InputFormProps> = ({ onSubmit, isLoading }) => {
     </div>
   );
 };
+
+// Helper icon
+const SparklesIcon = ({ className }: { className: string }) => (
+  <svg className={className} xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 3.214L13 21l-2.286-6.857L5 12l5.714-3.214z" />
+  </svg>
+);
 
 export default InputForm;

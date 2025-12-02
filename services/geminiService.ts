@@ -3,6 +3,17 @@ import { FormData, LessonPlanData } from "../types";
 
 const apiKey = process.env.API_KEY || '';
 
+// Schema for extraction
+const extractionSchema = {
+  type: Type.OBJECT,
+  properties: {
+    contentStandard: { type: Type.STRING },
+    performanceStandard: { type: Type.STRING },
+    learningCompetency: { type: Type.STRING },
+  },
+  required: ["contentStandard", "performanceStandard", "learningCompetency"]
+};
+
 // Define schema for a single day's plan
 const dailyPlanSchema = {
   type: Type.OBJECT,
@@ -66,6 +77,45 @@ const dllSchema = {
   required: ["days"]
 };
 
+// Helper to extract standards from an uploaded file
+export const extractStandards = async (fileData: { data: string; mimeType: string }) => {
+  if (!apiKey) throw new Error("API Key is missing.");
+  const ai = new GoogleGenAI({ apiKey });
+
+  const prompt = `
+    Analyze the provided Lesson Exemplar document/image.
+    Extract the following three specific fields verbatim (or as close as possible):
+    1. Content Standards
+    2. Performance Standards
+    3. Learning Competency/ies
+    
+    Return the result as JSON.
+  `;
+
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: {
+        parts: [
+          { inlineData: { mimeType: fileData.mimeType, data: fileData.data } },
+          { text: prompt }
+        ]
+      },
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: extractionSchema,
+      }
+    });
+
+    const text = response.text;
+    if (!text) throw new Error("No response from AI extraction");
+    return JSON.parse(text);
+  } catch (error) {
+    console.error("Error extracting standards:", error);
+    throw error;
+  }
+};
+
 export const generateLessonPlan = async (data: FormData): Promise<LessonPlanData> => {
   if (!apiKey) {
     throw new Error("API Key is missing.");
@@ -73,7 +123,7 @@ export const generateLessonPlan = async (data: FormData): Promise<LessonPlanData
 
   const ai = new GoogleGenAI({ apiKey });
 
-  const prompt = `
+  let prompt = `
     Create a 5-Day Daily Lesson Log (DLL) strictly following the specified structure.
     
     Context:
@@ -95,7 +145,27 @@ export const generateLessonPlan = async (data: FormData): Promise<LessonPlanData
     - Day 5: ${data.dailyTopics.day5}
     
     Context/Notes: ${data.specificNeeds}
+  `;
 
+  // Construct parts. If file exists, add it.
+  const parts: any[] = [];
+  
+  if (data.exemplarFile) {
+    parts.push({ 
+      inlineData: { 
+        mimeType: data.exemplarFile.mimeType, 
+        data: data.exemplarFile.data 
+      } 
+    });
+    prompt += `
+      IMPORTANT: A Lesson Exemplar file has been provided. 
+      Use this file as the primary REFERENCE for the flow, style, and depth of the activities.
+      Ensure the generated daily plans align with the methodology shown in the exemplar, 
+      but adapted for the specific 5 days and topics provided above.
+    `;
+  }
+
+  prompt += `
     Task:
     Generate the lesson plan content for EACH of the 5 days.
 
@@ -127,10 +197,13 @@ export const generateLessonPlan = async (data: FormData): Promise<LessonPlanData
     Also include "Instructional Design framework (IDF) features" and "21st Century Skills" for each day.
   `;
 
+  // Add the prompt text to parts
+  parts.push({ text: prompt });
+
   try {
     const response = await ai.models.generateContent({
       model: "gemini-2.5-flash",
-      contents: prompt,
+      contents: { parts: parts },
       config: {
         responseMimeType: "application/json",
         responseSchema: dllSchema,
